@@ -4,7 +4,30 @@
 Each player has fifteen checkers and moves them around twenty-four points according to the roll of two dice;
 the first player to bear off all fifteen wins.
 
-![Backgammon](img/game_screenshot.png)
+![Selecting a checker: single-die moves in green, combined dice in blue](img/screenshots/gameplay.png)
+
+## Quick start
+
+1. Install **JDK 21** ([instructions below](#1-install-java-jdk-21)).
+2. Open a terminal in the project folder and run:
+
+   | Windows | macOS / Linux |
+   |---|---|
+   | `gradlew.bat desktop:run` | `./gradlew desktop:run` |
+
+The first run downloads Gradle and the libraries (a few hundred MB, needs internet) and takes a few minutes.
+Later runs start in seconds.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Main menu](img/screenshots/menu.png) | ![A hit checker enters from the bar](img/screenshots/bar-entry.png) |
+| **Main menu** | **Entering from the bar**: the checker on the bar is selected automatically; the 4 enters (green), 4+6 goes further (blue) |
+| ![Bearing off](img/screenshots/bear-off.png) | ![Game over](img/screenshots/game-over.png) |
+| **Bearing off**: the tray lights up and shows which die is used | **Game over**: single game, gammon or backgammon |
+| ![Settings](img/screenshots/settings.png) | ![Leaderboard](img/screenshots/leaderboard.png) |
+| **Settings**: player names, who starts, hints, sound | **Leaderboard**: wins and points per player |
 
 ## How to play
 
@@ -44,22 +67,121 @@ what to do next, the pip count and how many checkers are borne off.
 
 Not implemented (yet): the doubling cube and the opening roll (who starts is chosen in Settings).
 
-## Building and running
+## Setup
 
-Requirements: **JDK 17 or newer — JDK 21 LTS recommended** (e.g. [Eclipse Temurin 21](https://adoptium.net/temurin/releases/?version=21)).
-Gradle itself is downloaded by the wrapper.
+### 1. Install Java (JDK 21)
 
-```bash
-./gradlew desktop:run        # play (Windows: gradlew.bat desktop:run)
-./gradlew test               # run the unit tests
-./gradlew desktop:jar        # runnable JAR: desktop/build/libs/Backgammon-<version>.jar
+The build needs a **JDK 17 or newer; JDK 21 LTS is recommended**. Any distribution works; the commands below install
+[Eclipse Temurin](https://adoptium.net/installation/) or the OpenJDK package of your Linux distribution.
+Gradle itself does not need to be installed: the `gradlew` wrapper downloads it.
+
+**Windows** (PowerShell or Command Prompt):
+
+```powershell
+winget install EclipseAdoptium.Temurin.21.JDK
 ```
 
-**Android** (optional): the `android` module is only included when an Android SDK is configured, either via
-`ANDROID_HOME` / `ANDROID_SDK_ROOT` or a `local.properties` file in the project root containing
-`sdk.dir=C:\\Users\\<you>\\AppData\\Local\\Android\\Sdk`. Then: `./gradlew android:installDebug`.
+Alternatively, download the `.msi` installer from [adoptium.net](https://adoptium.net/temurin/releases/?version=21&os=windows)
+and enable **Set JAVA_HOME variable** during setup. Open a **new** terminal afterwards.
 
-Versions: libGDX 1.14.2, LWJGL 3.4.3, Gradle 9.8.1, Android Gradle Plugin 8.9.3 (compile/target SDK 36, min SDK 21),
+**macOS** (with [Homebrew](https://brew.sh/)):
+
+```bash
+brew install --cask temurin@21
+```
+
+Alternatively, download the `.pkg` installer from [adoptium.net](https://adoptium.net/temurin/releases/?version=21&os=mac).
+
+**Linux**:
+
+```bash
+# Ubuntu 22.04+ / Debian 13+
+sudo apt update && sudo apt install openjdk-21-jdk
+# Debian 12 (JDK 17 also works)
+sudo apt update && sudo apt install openjdk-17-jdk
+
+# Fedora / RHEL
+sudo dnf install java-21-openjdk-devel
+
+# Arch Linux
+sudo pacman -S jdk21-openjdk
+```
+
+Alternatively, use [SDKMAN!](https://sdkman.io/) (`sdk list java`, then `sdk install java <21.x.x>-tem`).
+
+**Check the installation** (in a new terminal):
+
+```bash
+java -version     # should print version 21 (or 17+)
+```
+
+If `java` is not found, add the JDK's `bin` folder to `PATH` or set `JAVA_HOME` to the JDK folder.
+The build asks Gradle for a JDK 21 daemon (`gradle/gradle-daemon-jvm.properties`); if you only have another version
+installed, Gradle downloads a matching JDK 21 automatically on the first build.
+
+### 2. Get the code
+
+```bash
+git clone https://github.com/cgorican/gdx-backgammon.git
+cd gdx-backgammon
+```
+
+## Running and building
+
+All commands are run from the project folder. On **Windows** use `gradlew.bat <task>`; on **macOS / Linux** use
+`./gradlew <task>`. (If `./gradlew` reports "permission denied", run `chmod +x gradlew` once.)
+
+| Task | Command (macOS / Linux) | What it does |
+|---|---|---|
+| Play | `./gradlew desktop:run` | Builds and starts the desktop game |
+| Unit tests | `./gradlew test` | Runs the rules, layout and leaderboard tests (report: `core/build/reports/tests/test/index.html`) |
+| Runnable JAR | `./gradlew desktop:jar` | Creates `desktop/build/libs/Backgammon-1.1.0.jar` |
+| App folder | `./gradlew desktop:installDist` | Creates `desktop/build/install/Backgammon/` with launch scripts in `bin/` |
+| App zip | `./gradlew desktop:distZip` | Zips the above: `desktop/build/distributions/Backgammon-1.1.0.zip` |
+| Everything | `./gradlew build` | Compiles all modules and runs the tests |
+| Clean | `./gradlew clean` | Deletes all build output |
+| Repack textures | `./gradlew desktop:packAssets` | Rebuilds the atlases in `assets/` from `desktop/assets-raw/` |
+
+**Running the built JAR** (it contains everything; only Java is needed on the target machine):
+
+```bash
+java -jar desktop/build/libs/Backgammon-1.1.0.jar                         # Windows / Linux
+java -XstartOnFirstThread -jar desktop/build/libs/Backgammon-1.1.0.jar    # macOS
+```
+
+You can also double-click the JAR if `.jar` files are associated with Java (the Temurin installer offers this),
+or unzip the app zip and run `bin\Backgammon.bat` (Windows) / `bin/Backgammon` (macOS / Linux). The leaderboard file (`backgammon_leaderboard.json`) is written to the folder the
+game is started from.
+
+### Android (optional)
+
+The `android` module is only included when an Android SDK is configured, so the desktop game never needs it.
+Install [Android Studio](https://developer.android.com/studio) (or the command-line SDK tools) and either set the
+`ANDROID_HOME` environment variable or create `local.properties` in the project root:
+
+```properties
+# Windows (note the escaped backslashes)
+sdk.dir=C\:\\Users\\<you>\\AppData\\Local\\Android\\Sdk
+# macOS
+sdk.dir=/Users/<you>/Library/Android/sdk
+# Linux
+sdk.dir=/home/<you>/Android/Sdk
+```
+
+| Task | Command (macOS / Linux) |
+|---|---|
+| Install on a connected device / emulator | `./gradlew android:installDebug` |
+| Start the installed app | `./gradlew android:run` |
+| Debug APK | `./gradlew android:assembleDebug` (output in `android/build/outputs/apk/debug/`) |
+
+### IDE
+
+Open the project folder in **IntelliJ IDEA** or **Android Studio** as a Gradle project and run the `desktop:run`
+Gradle task, or run `si.um.feri.backgammon.DesktopLauncher` directly with `assets/` as the working directory.
+
+### Versions
+
+libGDX 1.14.2, LWJGL 3.4.3, Gradle 9.8.1 (wrapper), Android Gradle Plugin 8.9.3 (compile/target SDK 36, min SDK 21),
 Java 17 language level, JUnit 6.
 
 ## Project structure
@@ -78,6 +200,7 @@ android/        Android launcher (optional module).
 assets/         Runtime assets (texture atlases, fonts, skin, audio).
 desktop/assets-raw/  Source images for the texture atlases.
 tools/generate_ui_assets.py  Generates the UI skin images and bitmap fonts.
+img/            Screenshots used in this README.
 ```
 
 ### Changing the UI art
@@ -85,6 +208,8 @@ tools/generate_ui_assets.py  Generates the UI skin images and bitmap fonts.
 1. `python tools/generate_ui_assets.py` regenerates the skin images and bitmap fonts (needs Pillow, fontTools and the
    Poppins fonts; see the script header).
 2. `./gradlew desktop:packAssets` repacks `desktop/assets-raw/*` into the atlases in `assets/`.
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 ## Credits
 

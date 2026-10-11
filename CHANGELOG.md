@@ -10,6 +10,7 @@
   with just a JDK.
 - Removed the Gson dependency (libGDX's built-in JSON is used) and the unused FreeType dependency; `gdx-tools` is only
   on the asset-packing classpath (`desktop:packAssets`), not in the game JAR.
+- `desktop:installDist` / `desktop:distZip` package the game as a fat JAR plus launch scripts.
 - Android: namespace moved to Gradle, R8 rules updated, core library desugaring, immersive mode.
 
 ### Bugs fixed

@@ -69,6 +69,20 @@ jar {
     }
 }
 
+// desktop:installDist / desktop:distZip: launch scripts (bin/) plus the fat JAR only, since it already contains
+// every dependency.
+tasks.named('startScripts', CreateStartScripts) {
+    classpath = files(tasks.named('jar'))
+}
+distributions {
+    main {
+        contents {
+            def gameJar = tasks.named('jar').flatMap { it.archiveFileName }
+            exclude { it.name.endsWith('.jar') && it.name != gameJar.get() }
+        }
+    }
+}
+
 // Kept for compatibility with the old "desktop:dist" command.
 tasks.register('dist') {
     group = 'build'
