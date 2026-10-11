@@ -1,1 +1,14 @@
-include 'desktop', 'android', 'core'
+rootProject.name = 'backgammon'
+
+include 'core', 'desktop'
+
+// The Android module needs the Android SDK. It is only included when an SDK is configured (via local.properties
+// or the ANDROID_HOME / ANDROID_SDK_ROOT environment variables), so the desktop game builds with just a JDK.
+def localProperties = new Properties()
+def localPropertiesFile = file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+}
+if (localProperties.getProperty('sdk.dir') || System.getenv('ANDROID_HOME') || System.getenv('ANDROID_SDK_ROOT')) {
+    include 'android'
+}

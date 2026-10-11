@@ -1,0 +1,42 @@
+# Changelog
+
+## 1.1.0
+
+### Build and dependencies
+- libGDX 1.11.0 → 1.14.2, LWJGL 3.4.3, Gradle 7.5.1 → 9.8.1 (wrapper), Android Gradle Plugin 7.2.2 → 8.9.3,
+  compile/target SDK 32 → 36, min SDK 16 → 21. Java language level 7/8 → 17 (build with JDK 17+, 21 recommended).
+- Standard source layout (`src/main/java`, `src/test/java`), JUnit 6 tests.
+- The Android module is optional: it is included only when an Android SDK is configured, so the desktop game builds
+  with just a JDK.
+- Removed the Gson dependency (libGDX's built-in JSON is used) and the unused FreeType dependency; `gdx-tools` is only
+  on the asset-packing classpath (`desktop:packAssets`), not in the game JAR.
+- Android: namespace moved to Gradle, R8 rules updated, core library desugaring, immersive mode.
+
+### Bugs fixed
+- **Crash** when a player on the bar rolled doubles and the entry point was blocked (array index 24 / -1).
+- **Soft lock while bearing off**: the turn did not end when the only "possible" move was an illegal high-die bear-off.
+- **Bar counts leaked between games**: hit checkers counted on the bar in one game blocked the same player in the next
+  (static state not reset on rematch or new game).
+- The rules did not force using both dice when possible, nor the larger die when only one can be used; the first die
+  was always used first unless the player knew to click the dice to swap them.
+- Leftover dice stayed on screen after a turn (actors were removed while iterating the stage's actor array).
+- Toggling **SFX** in the settings overwrote the **Music** setting, and the SFX setting was never saved.
+- Unticking any checkbox in Settings turned off continuous rendering, freezing animations.
+- `LeaderboardScreen` imported `java.awt.Menu`, which breaks the Android build.
+- The intro kept updating its stage after it had been disposed.
+- Player names were not saved; empty names were accepted.
+- The winner label's scale had no effect.
+- Music volume was only set when music was enabled at start-up.
+
+### Gameplay and UX
+- Tap a checker to select it, then tap a highlighted destination: single-die moves (green), combined-dice moves (blue)
+  and hits (red), with a ghost checker and a dice badge on each target. Checkers on the bar (and a lone movable
+  checker) are selected automatically. Movable checkers get a soft gold ring (can be turned off in Settings).
+- Smooth move animations, including hit checkers flying to the bar and multi-step combination moves.
+- Player cards show whose turn it is, what to do next, pip counts and borne-off checkers; a short message announces
+  each turn and passes without legal moves.
+- Dice stay visible: used dice are greyed out, doubles show four dice.
+- Larger, crisp buttons and text (new Poppins bitmap fonts and skin), Space/Enter to roll, Esc / Android back
+  handling, confirmation before leaving a game, game-over panel with win type (single, gammon, backgammon).
+- Optional point numbers are shown from the perspective of the player to move.
+- Leaderboard shows wins and points; existing leaderboard files are still read.

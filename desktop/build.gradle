@@ -1,47 +1,77 @@
-sourceCompatibility = 1.8
-sourceSets.main.java.srcDirs = [ "src/" ]
-sourceSets.main.resources.srcDirs = ["../assets"]
+plugins {
+    id 'application'
+}
 
-project.ext.mainClassName = "si.um.feri.backgammon.DesktopLauncher"
-project.ext.assetsDir = new File("../assets")
+eclipse.project.name = appName + '-desktop'
 
-import org.gradle.internal.os.OperatingSystem
-
-task run(dependsOn: classes, type: JavaExec) {
-    main = project.mainClassName
-    classpath = sourceSets.main.runtimeClasspath
-    standardInput = System.in
-    workingDir = project.assetsDir
-    ignoreExitValue = true
-
-    if (OperatingSystem.current() == OperatingSystem.MAC_OS) {
-        // Required to run on macOS
-        jvmArgs += "-XstartOnFirstThread"
+sourceSets {
+    main.resources.srcDirs += [rootProject.file('assets').path]
+    // Asset pipeline (texture packing). Kept out of the game's runtime classpath.
+    tools {
+        java.srcDirs = ['src/tools/java']
     }
 }
 
-task debug(dependsOn: classes, type: JavaExec) {
-    main = project.mainClassName
-    classpath = sourceSets.main.runtimeClasspath
-    standardInput = System.in
-    workingDir = project.assetsDir
-    ignoreExitValue = true
-    debug = true
+application {
+    mainClass = 'si.um.feri.backgammon.DesktopLauncher'
+    applicationName = appName
 }
 
-task dist(type: Jar) {
-    duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
-    manifest {
-        attributes 'Main-Class': project.mainClassName
+dependencies {
+    implementation project(':core')
+    implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+    implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+
+    toolsImplementation "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
+
+    // Forces a newer LWJGL than libGDX declares, to avoid warnings on Java 24+.
+    constraints {
+        ['lwjgl', 'lwjgl-glfw', 'lwjgl-jemalloc', 'lwjgl-openal', 'lwjgl-opengl', 'lwjgl-stb'].each { module ->
+            implementation("org.lwjgl:$module:$lwjgl3Version")
+        }
     }
+}
+
+def isMac = System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('mac')
+def modernJvmArgs = []
+if (JavaVersion.current().isJava9Compatible()) {
+    modernJvmArgs += ['--enable-native-access=ALL-UNNAMED', '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED']
+}
+if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_22)) {
+    modernJvmArgs += ['--sun-misc-unsafe-memory-access=deny']
+}
+application.applicationDefaultJvmArgs = modernJvmArgs
+
+tasks.named('run', JavaExec) {
+    workingDir = rootProject.file('assets')
+    if (isMac) jvmArgs '-XstartOnFirstThread'
+}
+
+// Repacks desktop/assets-raw/* into the texture atlases under assets/.
+tasks.register('packAssets', JavaExec) {
+    group = 'assets'
+    description = 'Packs the raw images in desktop/assets-raw into texture atlases in assets/.'
+    mainClass = 'si.um.feri.backgammon.AssetPacker'
+    classpath = sourceSets.tools.runtimeClasspath
+    workingDir = rootDir
+}
+
+// Runnable "fat" JAR: desktop/build/libs/Backgammon-<version>.jar
+jar {
+    archiveFileName = "${appName}-${project.version}.jar"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     dependsOn configurations.runtimeClasspath
-    from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/maven/**')
+    manifest {
+        attributes 'Main-Class': application.mainClass, 'Enable-Native-Access': 'ALL-UNNAMED',
+                'Multi-Release': 'true', 'Add-Exports': 'java.base/jdk.internal.misc'
     }
-    with jar
 }
 
-
-dist.dependsOn classes
-
-eclipse.project.name = appName + "-desktop"
+// Kept for compatibility with the old "desktop:dist" command.
+tasks.register('dist') {
+    group = 'build'
+    description = 'Builds the runnable desktop JAR (alias of jar).'
+    dependsOn 'jar'
+}
