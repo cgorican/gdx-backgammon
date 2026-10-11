@@ -4,6 +4,7 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -41,8 +42,9 @@ public class BackgammonGame extends Game {
         }
 
         batch = new SpriteBatch();
-        settings = new Settings(Gdx.app.getPreferences(BackgammonGame.class.getSimpleName()));
-        leaderboard = LeaderboardStore.local();
+        Preferences preferences = Gdx.app.getPreferences(BackgammonGame.class.getSimpleName());
+        settings = new Settings(preferences);
+        leaderboard = new LeaderboardStore(preferences, Gdx.files.local(LeaderboardStore.LEGACY_FILE_NAME));
         audio = new GameAudio(assetManager, settings);
         audio.updateMusic();
 

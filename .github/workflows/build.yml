@@ -1,0 +1,82 @@
+# Builds and tests every push and pull request, and packages the game for Windows, Linux and macOS.
+# Pushing a tag such as v1.2.0 also publishes the packages as a GitHub Release.
+name: Build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Build and run the unit tests
+        run: ./gradlew build
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: core/build/reports/tests/
+
+  package:
+    name: Package ${{ matrix.target }}
+    needs: test
+    runs-on: ubuntu-latest   # Construo cross-builds every platform from Linux.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: winX64
+            task: packageWinX64
+          - target: linuxX64
+            task: packageLinuxX64
+          - target: macX64
+            task: packageMacX64
+          - target: macM1
+            task: packageMacM1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Package
+        run: ./gradlew desktop:${{ matrix.task }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Backgammon-${{ matrix.target }}
+          path: dist/Backgammon-${{ matrix.target }}.zip
+          if-no-files-found: error
+
+  release:
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          pattern: Backgammon-*
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*.zip
+          generate_release_notes: true

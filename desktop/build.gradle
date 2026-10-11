@@ -1,5 +1,9 @@
+import io.github.fourlastor.construo.Target
+
 plugins {
     id 'application'
+    // Native packages (Windows .exe, macOS .app, Linux executable) with a bundled Java runtime.
+    id 'io.github.fourlastor.construo' version '2.2.2'
 }
 
 eclipse.project.name = appName + '-desktop'
@@ -88,4 +92,74 @@ tasks.register('dist') {
     group = 'build'
     description = 'Builds the runnable desktop JAR (alias of jar).'
     dependsOn 'jar'
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Native packages (Construo): ./gradlew desktop:packageAll, or one of packageWinX64 / packageLinuxX64 / packageMacX64 /
+// packageMacM1. Each writes dist/Backgammon-<target>.zip with a native launcher, a trimmed Java 21 runtime and the game,
+// so players do not need Java installed. Every target can be built on any OS. Downloads are pinned by SHA-256; when
+// updating the JDK or launcher, update the URLs/versions and checksums together (Adoptium publishes *.sha256.txt files).
+// ---------------------------------------------------------------------------------------------------------------------
+def temurinUrl = { String platform, String extension ->
+    "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/" +
+            "OpenJDK21U-jdk_${platform}_hotspot_21.0.12.1_1.${extension}"
+}
+def configureMac = { Target.MacOs target ->
+    target.identifier.set('si.um.feri.backgammon')
+    target.versionNumber.set(project.version.toString())
+    target.buildNumber.set(project.version.toString())
+    target.categoryName.set('public.app-category.board-games')
+    target.macIcon.set(project.file('icons/logo.icns'))
+}
+
+construo {
+    name.set(appName)
+    humanName.set(appName)
+    outputDir.set(rootProject.layout.projectDirectory.dir('dist'))
+
+    jlink {
+        // Listed explicitly: jdeps cannot see everything libGDX and LWJGL load at runtime.
+        guessModulesFromJar.set(false)
+        modules.addAll('java.base', 'java.desktop', 'java.management', 'jdk.unsupported')
+    }
+    roast {
+        // Native launcher (https://github.com/fourlastor-alexandria/roast); pinned to match the checksums below.
+        version.set('v1.6.0')
+    }
+
+    targets.configure {
+        register('winX64', Target.Windows) {
+            architecture.set(Target.Architecture.X86_64)
+            jdkUrl.set(temurinUrl('x64_windows', 'zip'))
+            jdkSha256.set('f9d6e191ab098c0d416e7d588a24420a8621cd2f4720dab2459b8b7b2d2d8b4e')
+            roastSha256.set('bb90c2390681af76a424d4c5dc4ad59af609c0e30342fb85cb5ffff0ecaa1be7')
+            icon.set(project.file('icons/logo.png'))
+        }
+        register('linuxX64', Target.Linux) {
+            architecture.set(Target.Architecture.X86_64)
+            jdkUrl.set(temurinUrl('x64_linux', 'tar.gz'))
+            jdkSha256.set('ce79869e1307ed8ee1e2baa86a412b1eb5b75d10a01006d788a6f968bcfaee94')
+            roastSha256.set('c917fdfda3247689636a00922b4b9e522ec02dc6eaa9eb75bf7cb8d7055e8e4b')
+        }
+        register('macX64', Target.MacOs) {
+            architecture.set(Target.Architecture.X86_64)
+            jdkUrl.set(temurinUrl('x64_mac', 'tar.gz'))
+            jdkSha256.set('44db0f08196daf19a47f90d13388b0c943b67663cb537f998fe29e836fa842ce')
+            roastSha256.set('38775d132e58b018a0402a64e5137c865b5ecbdb688c8135ec77b5112e79e1c3')
+            configureMac(it)
+        }
+        register('macM1', Target.MacOs) {
+            architecture.set(Target.Architecture.AARCH64)
+            jdkUrl.set(temurinUrl('aarch64_mac', 'tar.gz'))
+            jdkSha256.set('3623232f33a9c3baadf304480b2535f9a3cba8a58d42ecbb438ba267315d9998')
+            roastSha256.set('ee21838984f931b5adde06a8460d8ca3c1b0a5592caf8c88b5c65c6d60b4fa3e')
+            configureMac(it)
+        }
+    }
+}
+
+tasks.register('packageAll') {
+    group = 'construo'
+    description = 'Builds the native packages for Windows, Linux and macOS (Intel and Apple Silicon) into dist/.'
+    dependsOn 'packageWinX64', 'packageLinuxX64', 'packageMacX64', 'packageMacM1'
 }
